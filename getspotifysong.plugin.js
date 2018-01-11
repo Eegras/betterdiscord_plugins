@@ -92,45 +92,52 @@ class SpotifyStatus {
     
     this.rpc.login(this.appClient).catch(this.log.error);
   }
-  async spotifyReconnect (self) {
-    self.s.getStatus(function(err, res) {
+
+  stop() {
+    clearInterval(global.intloop);
+  }
+
+  async spotifyReconnect () {
+    const mainClass = this;
+    this.s.getStatus(function(err, res) {
       if (!err) {
         clearInterval(check);
-        global.intloop = setInterval(self.checkSpotify, 1500, this);
+        global.intloop = setInterval(mainClass.checkSpotify, 1500, mainClass);
       }
     });
   }
   
-  async checkSpotify(self) {
-    self.s.getStatus(function (err, res) {
+  async checkSpotify() {
+    const mainClass = this;
+    this.s.getStatus(function (err, res) {
       if (err) {
         if (err.code === "ECONNREFUSED") {
           if (err.address === "127.0.0.1" && err.port === 4381) {
               /**
-               * Temporary workaround - to truly fix this, we need to change spotify.js to check for ports above 4381 to the maximum range.
-               * This is usually caused by closing Spotify and reopening before the port stops listening. Waiting about 10 seconds should be
+               * Temporary workaround - to truly fix mainClass, we need to change spotify.js to check for ports above 4381 to the maximum range.
+               * mainClass is usually caused by closing Spotify and reopening before the port stops listening. Waiting about 10 seconds should be
                * sufficient time to reopen the application.
                **/
-              self.log.error("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for this to work. Checking every 5 seconds to check if you've done so.");
+              mainClass.log.error("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for mainClass to work. Checking every 5 seconds to check if you've done so.");
               clearInterval(intloop);
-              global.check = setInterval(self.spotifyReconnect, 5000, self);
+              global.check = setInterval(mainClass.spotifyReconnect, 5000, mainClass);
           }
         } else {
-            self.log.error("Failed to fetch Spotify data:", err);
+            mainClass.log.error("Failed to fetch Spotify data:", err);
         }
         return;
       }
   
       if (!res.track.track_resource || !res.track.artist_resource) return;
   
-      if (self.currentSong.uri && res.track.track_resource.uri == self.currentSong.uri && (res.playing != self.currentSong.playing)) {
-        self.currentSong.playing = res.playing;
-        self.currentSong.position = res.playing_position;
-        self.songEmitter.emit('songUpdate', self.currentSong);
+      if (mainClass.currentSong.uri && res.track.track_resource.uri == mainClass.currentSong.uri && (res.playing != mainClass.currentSong.playing)) {
+        mainClass.currentSong.playing = res.playing;
+        mainClass.currentSong.position = res.playing_position;
+        mainClass.songEmitter.emit('songUpdate', mainClass.currentSong);
         return;
       }
   
-      if (res.track.track_resource.uri == self.currentSong.uri) return;
+      if (res.track.track_resource.uri == mainClass.currentSong.uri) return;
   
       let start = parseInt(new Date().getTime().toString().substr(0, 10)),
           end = start + (res.track.length - res.playing_position);
@@ -147,12 +154,9 @@ class SpotifyStatus {
         end
       };
       
-      self.currentSong = song;
+      mainClass.currentSong = song;
   
-      self.songEmitter.emit('newSong', song);
+      mainClass.songEmitter.emit('newSong', song); 
     });
-  }
-  checkHosts(file) {
-    if (file.includes("open.spotify.com")) throw new Error("Arr' yer be pirating, please remove \"open.spotify.com\" rule from your hosts file.");
   }
 }
