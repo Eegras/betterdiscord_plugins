@@ -2,6 +2,16 @@
 
 /* global PluginSettings:false, PluginUtilities:false, ReactUtilities:false, DOMUtilities:false, ColorUtilities:false */
 
+const {
+  resolve
+} = require("path");
+const {
+  Client
+} = require('discord-rpc');
+const log = require("fancy-log");
+const events = require('events');
+const fs = require('fs');
+
 class SpotifyStatus {
   getName() { return "SpotifyStatus"; }
   getShortName() { return "SpotifyStatus"; }
@@ -10,16 +20,14 @@ class SpotifyStatus {
   getAuthor() { return "Zerebos"; }
 
   constructor() {
-    this.path = require("path");
-    var { Client } = require('discord-rpc');
-    this.keys = require(this.path.resolve(process.env.APPDATA, "BetterDiscord/Plugins/keys.json"));
-    this.spotifyWeb = require(this.path.resolve(process.env.APPDATA, "BetterDiscord/Plugins/spotify.js"));
-    this.log = require("fancy-log");
-    this.events = require('events');
-    this.fs = require('fs');
-    this.songEmitter = new this.events.EventEmitter();
-    
-    this.rpc = new Client({ transport: this.keys.rpcTransportType });
+    this.keys = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/keys.json"));
+    this.spotifyWeb = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/spotify.js"));
+    this.songEmitter = new events.EventEmitter();
+
+    this.rpc = new Client({
+      transport: this.keys.rpcTransportType
+    });
+
     this.s = new this.spotifyWeb.SpotifyWebHelper();
     this.appClient = this.keys.appClientID;
     this.currentSong = {};
@@ -40,8 +48,7 @@ class SpotifyStatus {
     var largeImageKey = this.keys.imageKeys.large;
     var smallImageKey = this.keys.imageKeys.small;
     var smallImagePausedKey = this.keys.imageKeys.smallPaused;
-    
-    
+
     /**
      * Initialise song listeners
      * newSong: gets emitted when the song changes to update the RP
@@ -60,7 +67,7 @@ class SpotifyStatus {
         instance: false,
       });
     
-      this.log(`Updated song to: ${song.artist} - ${song.name}`);
+      log(`Updated song to: ${song.artist} - ${song.name}`);
     });
     
     this.songEmitter.on('songUpdate', song => {
@@ -83,14 +90,14 @@ class SpotifyStatus {
         instance: false,
       });
     
-      this.log(`Song state updated (playing: ${song.playing})`)
+      log(`Song state updated (playing: ${song.playing})`)
     });
     
     this.rpc.on('ready', () => {
-        global.intloop = setInterval(this.checkSpotify, 1500, this);
+        global.intloop = setInterval(this.checkSpotify, 1500);
     });
     
-    this.rpc.login(this.appClient).catch(this.log.error);
+    this.rpc.login(this.appClient).catch(log.error);
   }
 
   stop() {
@@ -102,7 +109,7 @@ class SpotifyStatus {
     this.s.getStatus(function(err, res) {
       if (!err) {
         clearInterval(check);
-        global.intloop = setInterval(mainClass.checkSpotify, 1500, mainClass);
+        global.intloop = setInterval(mainClass.checkSpotify, 1500);
       }
     });
   }
@@ -120,7 +127,7 @@ class SpotifyStatus {
                **/
               mainClass.log.error("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for mainClass to work. Checking every 5 seconds to check if you've done so.");
               clearInterval(intloop);
-              global.check = setInterval(mainClass.spotifyReconnect, 5000, mainClass);
+              global.check = setInterval(mainClass.spotifyReconnect, 5000);
           }
         } else {
             mainClass.log.error("Failed to fetch Spotify data:", err);
