@@ -1,23 +1,24 @@
 //META{"name":"SpotifyStatus", "pname":"SpotifyStatus"}*//
-
+'use strict';
 /* global PluginSettings:false, PluginUtilities:false, ReactUtilities:false, DOMUtilities:false, ColorUtilities:false */
+
+// most of this was stolen from https://github.com/nations/spoticord
 
 const {
   resolve
 } = require("path");
 const {
   Client
-} = require('discord-rpc');
-const log = require("fancy-log");
+} = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/discord-rpc.js"));
 const events = require('events');
 const fs = require('fs');
 
 class SpotifyStatus {
   getName() { return "SpotifyStatus"; }
   getShortName() { return "SpotifyStatus"; }
-  getDescription() { return "Adds server-based role colors to typing, voice, popouts, modals and more! Support Server: bit.ly/ZeresServer"; }
-  getVersion() { return "0.6.0"; }
-  getAuthor() { return "Zerebos"; }
+  getDescription() { return "Uses rich presence to show what you're listening to on Spotify in Discord."; }
+  getVersion() { return "0.1.0"; }
+  getAuthor() { return "Eegras"; }
 
   constructor() {
     this.keys = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/keys.json"));
@@ -28,7 +29,7 @@ class SpotifyStatus {
       transport: this.keys.rpcTransportType
     });
 
-    this.s = new this.spotifyWeb.SpotifyWebHelper();
+    this.spot = new this.spotifyWeb.SpotifyWebHelper();
     this.appClient = this.keys.appClientID;
     this.currentSong = {};
   }
@@ -66,8 +67,6 @@ class SpotifyStatus {
         smallImageText: `💿  ${song.album}`,
         instance: false,
       });
-    
-      log(`Updated song to: ${song.artist} - ${song.name}`);
     });
     
     this.songEmitter.on('songUpdate', song => {
@@ -89,34 +88,35 @@ class SpotifyStatus {
         smallImageText: `💿  ${song.album}`,
         instance: false,
       });
-    
-      log(`Song state updated (playing: ${song.playing})`)
     });
-    
+
     this.rpc.on('ready', () => {
-        global.intloop = setInterval(this.checkSpotify, 1500);
+        this.intloop = setInterval(this.checkSpotify.bind(this), 1500);
     });
     
     this.rpc.login(this.appClient).catch(log.error);
   }
 
   stop() {
-    clearInterval(global.intloop);
+    console.log("Stopping");
+    clearInterval(this.intloop);
+    this.currentSong = {};
+    this.rpc.setActivity({});
   }
 
   async spotifyReconnect () {
     const mainClass = this;
-    this.s.getStatus(function(err, res) {
+    this.spot.getStatus(function(err, res) {
       if (!err) {
-        clearInterval(check);
-        global.intloop = setInterval(mainClass.checkSpotify, 1500);
+        clearInterval(this.check);
+        this.intloop = setInterval(mainClass.checkSpotify.bind(this), 1500);
       }
     });
   }
   
   async checkSpotify() {
     const mainClass = this;
-    this.s.getStatus(function (err, res) {
+    this.spot.getStatus(function (err, res) {
       if (err) {
         if (err.code === "ECONNREFUSED") {
           if (err.address === "127.0.0.1" && err.port === 4381) {
@@ -126,8 +126,8 @@ class SpotifyStatus {
                * sufficient time to reopen the application.
                **/
               mainClass.log.error("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for mainClass to work. Checking every 5 seconds to check if you've done so.");
-              clearInterval(intloop);
-              global.check = setInterval(mainClass.spotifyReconnect, 5000);
+              clearInterval(this.intloop);
+              global.check = setInterval(mainClass.spotifyReconnect.bind(this), 5000);
           }
         } else {
             mainClass.log.error("Failed to fetch Spotify data:", err);
