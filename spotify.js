@@ -66,7 +66,7 @@ function generateRandomString(length) {
 
 function generateRandomLocalHostName() {
     // Generate a random hostname under the .spotilocal.com domain
-    return generateRandomString(10) + '.spotilocal.com'
+    return '127.0.0.1'
 }
 
 async function getOauthToken(cb) {
