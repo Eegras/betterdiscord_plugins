@@ -9,7 +9,7 @@ const {
 } = require("path");
 const {
   Client
-} = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/discord-rpc.js"));
+} = require(resolve(process.env.APPDATA, "BetterDiscord/Plugins/discord-rpc"));
 const events = require('events');
 const fs = require('fs');
 
@@ -94,7 +94,7 @@ class SpotifyStatus {
         this.intloop = setInterval(this.checkSpotify.bind(this), 1500);
     });
     
-    this.rpc.login(this.appClient).catch(log.error);
+    this.rpc.login(this.appClient).catch(console.log);
   }
 
   stop() {
@@ -125,12 +125,12 @@ class SpotifyStatus {
                * mainClass is usually caused by closing Spotify and reopening before the port stops listening. Waiting about 10 seconds should be
                * sufficient time to reopen the application.
                **/
-              mainClass.log.error("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for mainClass to work. Checking every 5 seconds to check if you've done so.");
+              console.log("Spotify seems to be closed or unreachable on port 4381! Close Spotify and wait 10 seconds before restarting for mainClass to work. Checking every 5 seconds to check if you've done so.");
               clearInterval(this.intloop);
               global.check = setInterval(mainClass.spotifyReconnect.bind(this), 5000);
           }
         } else {
-            mainClass.log.error("Failed to fetch Spotify data:", err);
+            console.log.error("Failed to fetch Spotify data:", err);
         }
         return;
       }
